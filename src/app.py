@@ -15,8 +15,14 @@ import io
 import base64
 
 
+def read_df():
+    df = pd.read_csv("data.csv", encoding="utf-16", sep="\t", decimal=",")
+    df['is_contacted'] = False
+    df['id'] = df.index
+    return df
+
 # df = pd.read_csv("data.csv", encoding="utf-16", sep="\t", decimal=",")
-df =pd.read_csv('sheet.csv',encoding="utf-8", sep=',')
+df = pd.read_csv('sheet.csv',encoding="utf-8", sep=',')
 df['is_contacted'] = False
 df['id'] = df.index
 
@@ -107,7 +113,7 @@ def export_selected_data(n_clicks, selectedData):
         if selectedData is not None:
             df_selected = pd.DataFrame(selectedData['points'])
             df_selected = df.iloc[df_selected["pointIndex"]]
-            df_selected['is_contacted'] = True
+            df_selected.loc[:, 'is_contacted'] = True
             csv_string = df_selected.to_csv(encoding='utf-8', sep="\t")
             return dict(content=csv_string, filename='selected-data.csv')
         else:
@@ -127,12 +133,18 @@ def download_state(n_clicks):
               [Input('upload-data', 'contents')],
               [State('upload-data', 'filename')])
 def update_df(contents, filename):
+
     if contents is not None:
         try:
             content_type, content_string = contents.split(',')
             decoded = base64.b64decode(content_string)
             df_new = pd.read_csv(io.StringIO(decoded.decode('utf-8')), sep='\t')
             df_new.index = df_new.id
+
+            df = pd.read_csv('sheet.csv',encoding="utf-8", sep=',')
+            df['is_contacted'] = False
+            df['id'] = df.index
+
             df.update(df_new)
         except Exception as e:
             print(e)
