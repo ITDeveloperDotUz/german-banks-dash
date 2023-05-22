@@ -15,16 +15,8 @@ import io
 import base64
 
 
-def read_df():
-    df = pd.read_csv("data.csv", encoding="utf-16", sep="\t", decimal=",")
-    df['is_contacted'] = False
-    df['id'] = df.index
-    return df
-
-# df = pd.read_csv("data.csv", encoding="utf-16", sep="\t", decimal=",")
-df = pd.read_csv('sheet.csv',encoding="utf-8", sep=',')
+df = pd.read_csv('sheet.csv',encoding="utf-8", sep=',', index_col=0)
 df['is_contacted'] = False
-df['id'] = df.index
 
 center_lat = df.Latitude.mean()
 center_lon = df.Longitude.mean()
@@ -72,7 +64,7 @@ def app_layout(df):
                     }
                 }
             )
-        ], className='four columns', style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': '2vw', 'margin-top': '2vw'}),
+        ], className='four columns', style={'display': 'inline-block', 'verticalAlign': 'top', 'marginLeft': '2vw', 'marginTop': '2vw'}),
         
         
             html.Div([
@@ -80,7 +72,7 @@ def app_layout(df):
             children=html.Pre(id='lasso', style={'overflowY': 'scroll', 'height': '25vw'}),
         )
     ], 
-             className='four columns', style={'display': 'inline-block', 'vertical-align': 'top', 'margin-top': '3vw'}),
+             className='four columns', style={'display': 'inline-block', 'verticalAlign': 'top', 'marginTop': '3vw'}),
             
                     html.Div([
             html.Button('Export State', id='download-button'),
@@ -90,7 +82,7 @@ def app_layout(df):
         html.Div([            dash_table.DataTable(                id='df-table',                columns=[{"name": i, "id": i} for i in df.columns],
                 data=df.to_dict('records'),
             )
-        ], className='four columns', style={'display': 'inline-block', 'vertical-align': 'top', 'margin-top': '3vw','overflowY': 'scroll', 'height': '15vw'})
+        ], className='four columns', style={'display': 'inline-block', 'verticalAlign': 'top', 'marginTop': '3vw','overflowY': 'scroll', 'height': '15vw'})
     ], className="row")
 
 # Add the file upload button to the layout
@@ -111,10 +103,12 @@ app.layout = html.Div([
 def export_selected_data(n_clicks, selectedData):
     if n_clicks is not None:
         if selectedData is not None:
+            
             df_selected = pd.DataFrame(selectedData['points'])
-            df_selected = df.iloc[df_selected["pointIndex"]]
-            df_selected.loc[:, 'is_contacted'] = True
-            csv_string = df_selected.to_csv(encoding='utf-8', sep="\t")
+            point_indices = df_selected["pointIndex"]
+            all_selected = df[df.index.isin(point_indices) | (df['is_contacted'] == True)]
+            all_selected.loc[:, 'is_contacted'] = True
+            csv_string = all_selected.to_csv(encoding='utf-8', sep=",")
             return dict(content=csv_string, filename='selected-data.csv')
         else:
             return None
@@ -124,9 +118,8 @@ def export_selected_data(n_clicks, selectedData):
               [Input('download-button', 'n_clicks')])
 def download_state(n_clicks):
     if n_clicks is not None:
-        df_string = df.to_csv(encoding='utf-8', sep="\t")
+        df_string = df.to_csv(encoding='utf-8', sep=",")
         return dict(content=df_string, filename='save-state.csv') 
-    
     
 
 @app.callback(Output('output-data-upload', 'children'),
@@ -138,13 +131,10 @@ def update_df(contents, filename):
         try:
             content_type, content_string = contents.split(',')
             decoded = base64.b64decode(content_string)
-            df_new = pd.read_csv(io.StringIO(decoded.decode('utf-8')), sep='\t')
-            df_new.index = df_new.id
-
-            df = pd.read_csv('sheet.csv',encoding="utf-8", sep=',')
+            df_new = pd.read_csv(io.StringIO(decoded.decode('utf-8')), sep=',', index_col=0)
+            global df
+            df = pd.read_csv('sheet.csv',encoding="utf-8", sep=',', index_col=0)
             df['is_contacted'] = False
-            df['id'] = df.index
-
             df.update(df_new)
         except Exception as e:
             print(e)
