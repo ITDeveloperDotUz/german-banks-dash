@@ -103,10 +103,9 @@ app.layout = html.Div([
 def export_selected_data(n_clicks, selectedData):
     if n_clicks is not None:
         if selectedData is not None:
-            
             df_selected = pd.DataFrame(selectedData['points'])
             point_indices = df_selected["pointIndex"]
-            all_selected = df[df.index.isin(point_indices) | (df['is_contacted'] == True)]
+            all_selected = df[df.index.isin(point_indices)]
             all_selected.loc[:, 'is_contacted'] = True
             csv_string = all_selected.to_csv(encoding='utf-8', sep=",")
             return dict(content=csv_string, filename='selected-data.csv')
@@ -115,12 +114,19 @@ def export_selected_data(n_clicks, selectedData):
 
 #export state
 @app.callback(Output('download-state', 'data'),
-              [Input('download-button', 'n_clicks')])
-def download_state(n_clicks):
+              [Input('download-button', 'n_clicks')],
+              [State('graph', 'selectedData')])
+def download_state(n_clicks, selectedData):
     if n_clicks is not None:
-        df_string = df.to_csv(encoding='utf-8', sep=",")
-        return dict(content=df_string, filename='save-state.csv') 
-    
+        if selectedData is not None:
+            df_selected = pd.DataFrame(selectedData['points'])
+            point_indices = df_selected["pointIndex"]
+            all_selected = df[df.index.isin(point_indices) | (df['is_contacted'] == True)]
+            all_selected.loc[:, 'is_contacted'] = True
+            csv_string = all_selected.to_csv(encoding='utf-8', sep=",")
+            return dict(content=csv_string, filename='download_state.csv')
+        else:
+            return None
 
 @app.callback(Output('output-data-upload', 'children'),
               [Input('upload-data', 'contents')],
